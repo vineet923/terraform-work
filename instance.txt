@@ -1,0 +1,36 @@
+resource "aws_key_pair" "jenkins-key" {
+  key_name   = "jenkinskey"
+  public_key = file(var.public_key)
+}
+
+resource "aws_instance" "jenkins-server" {
+  ami                    = var.AMIS[var.REGION]
+  instance_type          = "t2.micro"
+  subnet_id              = aws_subnet.test-sub-pub-1.id
+  key_name               = aws_key_pair.jenkins-key.key_name
+  vpc_security_group_ids = [aws_security_group.sg_allow_ssh_jenkins.id]
+  associate_public_ip_address = true
+  user_data = file("install_jenkins.sh")
+  tags = {
+    Name = "jenkins-server"
+  }
+}
+
+resource "aws_ebs_volume" "vol_4_test" {
+  availability_zone = var.ZONE1
+  size              = 3
+  tags = {
+    Name = "extr-vol-4-for-test"
+  }
+}
+
+resource "aws_volume_attachment" "atch_vol_tes" {
+  device_name = "/dev/xvdh"
+  volume_id   = aws_ebs_volume.vol_4_test.id
+  instance_id = aws_instance.jenkins-server.id
+}
+
+output "PublicIP" {
+  value = aws_instance.jenkins-server.public_ip
+}
+
